@@ -1,0 +1,29 @@
+{
+  "name": "zktecoconnect-typescript",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joaquincabrerasimoes/ZKTecoConnect-TypeScript.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/joaquincabrerasimoes/ZKTecoConnect-TypeScript/issues"
+  },
+  "homepage": "https://github.com/joaquincabrerasimoes/ZKTecoConnect-TypeScript#readme",
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
