@@ -1,4 +1,5 @@
 import { ZKTecoClient } from './src/index.js';
+import { ZKAttendanceIDMethod } from './src/others/enums.js';
 async function testLiveEvents() {
     const zk = new ZKTecoClient('192.168.0.233', 4371, 5000, 69420, false, true);
     try {
@@ -11,10 +12,11 @@ async function testLiveEvents() {
         console.log('Connected');
         const memory = await zk.getMemoryInfo();
         console.log('Memory Info:', memory);
-        const users = await zk.getUser(2);
-        if (users) {
-            const attendance = await users.getAttendance();
-            console.log('Attendance:', attendance.map(attendance => attendance.toString()));
+        //get templates from user 3
+        var user = await zk.getUser(3);
+        if (user) {
+            var templates = await user.getTemplates();
+            console.log('Templates:', templates);
         }
     }
     catch (error) {

@@ -4,7 +4,7 @@ import { ZKTecoAttendance } from './zkTecoAttendance.js';
 
 class ZKTecoUser {
     uid: number;
-    role: number;
+    privilege: number;
     password: string;
     name: string;
     card: number;
@@ -14,9 +14,9 @@ class ZKTecoUser {
 
     rawData: string = '';
 
-    constructor(uid: number, role: number, password: string, name: string, card: number, groupId: string, userId: string, client: ZKTecoClient) {
+    constructor(uid: number, privilege: number, password: string, name: string, card: number, groupId: string, userId: string, client: ZKTecoClient) {
         this.uid = uid;
-        this.role = role;
+        this.privilege = privilege;
         this.password = password;
         this.name = name;
         this.card = card;
@@ -65,11 +65,11 @@ class ZKTecoUser {
     }
 
     public toString(): string {
-        return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}`;
+        return `UID: ${this.uid}, Privilege: ${this.privilege}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}`;
     }
 
     public toStringWithRawData(): string {
-        return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}, Raw Data: ${this.rawData}`;
+        return `UID: ${this.uid}, Privilege: ${this.privilege}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}, Raw Data: ${this.rawData}`;
     }
 
 }

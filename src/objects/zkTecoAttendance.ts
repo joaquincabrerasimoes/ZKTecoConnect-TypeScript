@@ -1,22 +1,22 @@
 import { ZKAttendanceIDMethod } from '../others/enums.js';
 
 class ZKTecoAttendance {
-    userId: string;
     uid: number;
+    userId: string;
     timestamp: Date;
-    status: number;
+    idMethod: number;
     punch: number;
 
-    constructor(userId: string, uid: number, timestamp: Date, status: number, punch: number) {
+    constructor(userId: string, uid: number, timestamp: Date, idMethod: number, punch: number) {
         this.userId = userId;
         this.uid = uid;
         this.timestamp = timestamp;
-        this.status = status;
+        this.idMethod = idMethod;
         this.punch = punch;
     }
 
     public get identificationMethod(): ZKAttendanceIDMethod {
-        switch (this.status) {
+        switch (this.idMethod) {
           case 0:
             return ZKAttendanceIDMethod.empty;
           case 1:
@@ -73,7 +73,7 @@ class ZKTecoAttendance {
       'uid': this.uid,
       'userId': this.userId,
       'timestamp': this.timestamp,
-      'status': this.status,
+      'idMethod': this.idMethod,
       'punch': this.punch,
     };
   }

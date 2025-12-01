@@ -298,14 +298,14 @@ class ZKTecoClient {
             if (this.userPacketSize_ === 28) {
                 while (slice.length >= 28) {
                     const uid = slice.readUInt16LE(0);
-                    const role = slice.readUInt8(2);
+                    const privilege = slice.readUInt8(2);
                     const password = removeNull(slice.subarray(3, 8).toString());
                     const name = removeNull(slice.subarray(8, 16).toString());
                     const card = slice.readUInt32LE(16);
                     const userIdInt = slice.readUInt32LE(24);
                     const userId = userIdInt.toString();
                     const rawData = slice.subarray(0, 27).toString('hex');
-                    var user = new ZKTecoUser(uid, role, password, name || `NN-${userId}`, card, '0', userId, this);
+                    var user = new ZKTecoUser(uid, privilege, password, name || `NN-${userId}`, card, '0', userId, this);
                     user.rawData = rawData;
                     parsedUsers.push(user);
                     slice = slice.subarray(28);
@@ -314,13 +314,13 @@ class ZKTecoClient {
             else {
                 while (slice.length >= 72) {
                     const uid = slice.readUInt16LE(0);
-                    const role = slice.readUInt8(2);
+                    const privilege = slice.readUInt8(2);
                     const password = removeNull(slice.subarray(3, 11).toString());
                     const name = removeNull(slice.subarray(11, 35).toString());
                     const card = slice.readUInt32LE(35);
                     const groupId = removeNull(slice.subarray(40, 47).toString());
                     const userId = removeNull(slice.subarray(48, 72).toString());
-                    var user = new ZKTecoUser(uid, role, password, name || `NN-${userId}`, card, groupId, userId, this);
+                    var user = new ZKTecoUser(uid, privilege, password, name || `NN-${userId}`, card, groupId, userId, this);
                     user.rawData = slice.subarray(0, 71).toString('hex');
                     parsedUsers.push(user);
                     slice = slice.subarray(72);
@@ -441,10 +441,10 @@ class ZKTecoClient {
         let dataBuffer = attendanceData.subarray(headerSkip);
         const attendances = [];
         if (recordSize === 8) {
-            // 8-byte record format: uid(2), status(1), timestamp(4), punch(1)
+            // 8-byte record format: uid(2), idMethod(1), timestamp(4), punch(1)
             while (dataBuffer.length >= 8) {
                 const uid = dataBuffer.readUInt16LE(0);
-                const status = dataBuffer.readUInt8(2);
+                const idMethod = dataBuffer.readUInt8(2);
                 const timestampBytes = dataBuffer.subarray(3, 7);
                 const timestamp = decodeTime(timestampBytes);
                 const punch = dataBuffer.readUInt8(7);
@@ -454,18 +454,18 @@ class ZKTecoClient {
                 if (user) {
                     userId = user.userId;
                 }
-                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, status, punch));
+                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, idMethod, punch));
                 dataBuffer = dataBuffer.subarray(8);
             }
         }
         else if (recordSize === 16) {
-            // 16-byte record format: user_id(4), timestamp(4), status(1), punch(1), reserved(2), workcode(4)
+            // 16-byte record format: user_id(4), timestamp(4), idMethod(1), punch(1), reserved(2), workcode(4)
             while (dataBuffer.length >= 16) {
                 const userIdInt = dataBuffer.readUInt32LE(0);
                 const userId = userIdInt.toString();
                 const timestampBytes = dataBuffer.subarray(4, 8);
                 const timestamp = decodeTime(timestampBytes);
-                const status = dataBuffer.readUInt8(8);
+                const idMethod = dataBuffer.readUInt8(8);
                 const punch = dataBuffer.readUInt8(9);
                 // Skip reserved(2) and workcode(4)
                 // Find uid from user_id
@@ -474,12 +474,12 @@ class ZKTecoClient {
                 if (user) {
                     uid = user.uid;
                 }
-                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, status, punch));
+                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, idMethod, punch));
                 dataBuffer = dataBuffer.subarray(16);
             }
         }
         else {
-            // 40-byte record format (default): uid(2), user_id(24), status(1), timestamp(4), punch(1), space(8)
+            // 40-byte record format (default): uid(2), user_id(24), idMethod(1), timestamp(4), punch(1), space(8)
             while (dataBuffer.length >= 40) {
                 // Python checks for special code_init pattern: b'\xff255\x00\x00\x00\x00\x00'
                 // This seems to be a marker that some devices send before attendance records
@@ -501,12 +501,12 @@ class ZKTecoClient {
                     break;
                 const uid = dataBuffer.readUInt16LE(0);
                 const userId = removeNull(dataBuffer.subarray(2, 26).toString());
-                const status = dataBuffer.readUInt8(26);
+                const idMethod = dataBuffer.readUInt8(26);
                 const timestampBytes = dataBuffer.subarray(27, 31);
                 const timestamp = decodeTime(timestampBytes);
                 const punch = dataBuffer.readUInt8(31);
                 // Skip space (8 bytes)
-                attendances.push(new ZKTecoAttendance(userId || uid.toString(), uid, timestamp, status, punch));
+                attendances.push(new ZKTecoAttendance(userId || uid.toString(), uid, timestamp, idMethod, punch));
                 dataBuffer = dataBuffer.subarray(recordSize); // Use recordSize to handle variations
             }
         }

@@ -1,11 +1,11 @@
 import { ZKAttendanceIDMethod } from '../others/enums.js';
 declare class ZKTecoAttendance {
-    userId: string;
     uid: number;
+    userId: string;
     timestamp: Date;
-    status: number;
+    idMethod: number;
     punch: number;
-    constructor(userId: string, uid: number, timestamp: Date, status: number, punch: number);
+    constructor(userId: string, uid: number, timestamp: Date, idMethod: number, punch: number);
     get identificationMethod(): ZKAttendanceIDMethod;
     get identificationMethodString(): string;
     get identificationMethodIcon(): string;
