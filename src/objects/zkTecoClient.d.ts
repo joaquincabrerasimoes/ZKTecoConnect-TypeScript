@@ -1,8 +1,9 @@
 import * as net from 'net';
 import * as dgram from 'dgram';
 import { Buffer } from 'buffer';
-import type { ZKTecoAttendance, ZKTecoDeviceInfo, ZKTecoFinger } from '../others/interfaces.js';
+import type { ZKTecoDeviceInfo, ZKTecoFinger } from '../others/interfaces.js';
 import { ZKTecoUser } from './zkTecoUser.js';
+import { ZKTecoAttendance } from './zkTecoAttendance.js';
 declare class ZKTecoClient {
     ip: string;
     port: number;
@@ -61,6 +62,7 @@ declare class ZKTecoClient {
     disableDevice(): Promise<boolean>;
     setTime(date: Date): Promise<boolean>;
     getAttendance(): Promise<ZKTecoAttendance[]>;
+    clearAttendance(): Promise<boolean>;
     /**
      *
      * @param index

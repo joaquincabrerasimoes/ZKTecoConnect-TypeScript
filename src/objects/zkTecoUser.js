@@ -1,4 +1,5 @@
 import { ZKTecoClient } from "./zkTecoClient.js";
+import { ZKTecoAttendance } from './zkTecoAttendance.js';
 class ZKTecoUser {
     uid;
     role;

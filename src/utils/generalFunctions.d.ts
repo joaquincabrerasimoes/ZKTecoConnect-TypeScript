@@ -1,7 +1,8 @@
 import * as net from 'net';
 import * as dgram from 'dgram';
 import { ZKTecoClient } from '../objects/zkTecoClient.js';
-import type { ZKTecoAttendance, FlushOptions } from '../others/interfaces.js';
+import type { FlushOptions } from '../others/interfaces.js';
+import { ZKTecoAttendance } from '../objects/zkTecoAttendance.js';
 export interface LivePacket {
     header: Buffer;
     payload: Buffer;

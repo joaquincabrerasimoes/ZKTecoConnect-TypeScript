@@ -1,5 +1,6 @@
 import { ZKTecoClient } from "./zkTecoClient.js";
-import type { ZKTecoAttendance, ZKTecoFinger } from "../others/interfaces.js";
+import type { ZKTecoFinger } from "../others/interfaces.js";
+import { ZKTecoAttendance } from './zkTecoAttendance.js';
 declare class ZKTecoUser {
     uid: number;
     role: number;

@@ -3,6 +3,7 @@ import * as dgram from 'dgram';
 import { USHRT_MAX, MACHINE_PREPARE_DATA_1, MACHINE_PREPARE_DATA_2, CMD_PREPARE_BUFFER, CMD_DATA, CMD_PREPARE_DATA, CMD_ACK_OK, CMD_READ_BUFFER, CMD_FREE_DATA } from '../others/constants.js';
 import { createHeader, createTcpTop, removeNull } from '../utils/utils.js';
 import { ZKTecoClient } from '../objects/zkTecoClient.js';
+import { ZKTecoAttendance } from '../objects/zkTecoAttendance.js';
 export async function createSocket(ip, port, timeout, forceUdp, client) {
     return new Promise((resolve, reject) => {
         if (!client.forceUdp) {
@@ -620,13 +621,7 @@ function parseLiveEventData(data, userLookup, verbose) {
             uid = parsedUid;
         }
     }
-    return {
-        userId,
-        uid,
-        status,
-        punch,
-        timestamp
-    };
+    return new ZKTecoAttendance(userId, uid, timestamp, status, punch);
 }
 function decodeLiveTimestamp(timeBytes) {
     const year = timeBytes.readUInt8(0);

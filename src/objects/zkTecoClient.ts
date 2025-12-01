@@ -13,9 +13,10 @@ import {
     flushExistingEvents,
     processLiveEventBuffer
 } from '../utils/generalFunctions.js';
-import type { ZKTecoAttendance, ZKTecoDeviceInfo, ZKTecoFinger } from '../others/interfaces.js';
+import type { ZKTecoDeviceInfo, ZKTecoFinger } from '../others/interfaces.js';
 import { makeCommKey, removeNull, decodeTime, encodeTime } from '../utils/utils.js';
 import { ZKTecoUser } from './zkTecoUser.js';
+import { ZKTecoAttendance } from './zkTecoAttendance.js';
 
 import {
     CMD_DELETE_USERTEMP, CMD_TESTVOICE, USHRT_MAX, _CMD_DEL_USER_TEMP, _CMD_GET_USERTEMP,
@@ -562,13 +563,7 @@ class ZKTecoClient {
                     userId = user.userId;
                 }
 
-                attendances.push({
-                    userId,
-                    timestamp,
-                    status,
-                    punch,
-                    uid
-                });
+                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, status, punch));
 
                 dataBuffer = dataBuffer.subarray(8);
             }
@@ -590,13 +585,7 @@ class ZKTecoClient {
                     uid = user.uid;
                 }
 
-                attendances.push({
-                    userId,
-                    timestamp,
-                    status,
-                    punch,
-                    uid
-                });
+                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, status, punch));
 
                 dataBuffer = dataBuffer.subarray(16);
             }
@@ -630,13 +619,7 @@ class ZKTecoClient {
                 const punch = dataBuffer.readUInt8(31);
                 // Skip space (8 bytes)
 
-                attendances.push({
-                    userId: userId || uid.toString(),
-                    timestamp,
-                    status,
-                    punch,
-                    uid
-                });
+                attendances.push(new ZKTecoAttendance(userId || uid.toString(), uid, timestamp, status, punch));
 
                 dataBuffer = dataBuffer.subarray(recordSize); // Use recordSize to handle variations
             }

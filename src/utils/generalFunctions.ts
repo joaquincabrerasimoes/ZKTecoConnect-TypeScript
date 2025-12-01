@@ -13,7 +13,8 @@ import {
 } from '../others/constants.js';
 import { createHeader, createTcpTop, removeNull } from '../utils/utils.js';
 import { ZKTecoClient } from '../objects/zkTecoClient.js';
-import type { ZKTecoAttendance, FlushOptions } from '../others/interfaces.js';
+import type { FlushOptions } from '../others/interfaces.js';
+import { ZKTecoAttendance } from '../objects/zkTecoAttendance.js';
 
 export interface LivePacket {
     header: Buffer;
@@ -714,13 +715,7 @@ function parseLiveEventData(
         }
     }
 
-    return {
-        userId,
-        uid,
-        status,
-        punch,
-        timestamp
-    };
+    return new ZKTecoAttendance(userId, uid, timestamp, status, punch);
 }
 
 function decodeLiveTimestamp(timeBytes: Buffer): Date {

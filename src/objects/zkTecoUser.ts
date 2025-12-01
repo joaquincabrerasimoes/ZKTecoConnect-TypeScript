@@ -1,5 +1,6 @@
 import { ZKTecoClient } from "./zkTecoClient.js";
-import type { ZKTecoAttendance, ZKTecoFinger } from "../others/interfaces.js";
+import type { ZKTecoFinger } from "../others/interfaces.js";
+import { ZKTecoAttendance } from './zkTecoAttendance.js';
 
 class ZKTecoUser {
     uid: number;
@@ -66,7 +67,7 @@ class ZKTecoUser {
     public toString(): string {
         return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}`;
     }
-    
+
     public toStringWithRawData(): string {
         return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}, Raw Data: ${this.rawData}`;
     }

@@ -4,7 +4,8 @@ import { Buffer } from 'buffer';
 import { createSocket, closeSocket, sendCommand, readSizes, readWithBuffer, receiveChunk, sendAckOnly, receiveLivePacket, flushExistingEvents, processLiveEventBuffer } from '../utils/generalFunctions.js';
 import { makeCommKey, removeNull, decodeTime, encodeTime } from '../utils/utils.js';
 import { ZKTecoUser } from './zkTecoUser.js';
-import { CMD_DELETE_USERTEMP, CMD_TESTVOICE, USHRT_MAX, _CMD_DEL_USER_TEMP, _CMD_GET_USERTEMP, CMD_CONNECT, CMD_AUTH, CMD_ACK_OK, CMD_ACK_UNAUTH, CMD_OPTIONS_RRQ, CMD_GET_VERSION, CMD_GET_TIME, CMD_EXIT, CMD_GET_FREE_SIZES, CMD_ACK_DATA, CMD_PREPARE_DATA, CMD_USERTEMP_RRQ, FCT_USER, CMD_ENABLEDEVICE, CMD_DISABLEDEVICE, CMD_SET_TIME, CMD_ATTLOG_RRQ, CMD_DB_RRQ, FCT_FINGERTMP, CMD_RESTART, CMD_UNLOCK, CMD_USER_WRQ, CMD_DELETE_USER, CMD_REFRESHDATA, CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, EF_ATTLOG, USER_DEFAULT, USER_ADMIN } from '../others/constants.js';
+import { ZKTecoAttendance } from './zkTecoAttendance.js';
+import { CMD_DELETE_USERTEMP, CMD_TESTVOICE, USHRT_MAX, _CMD_DEL_USER_TEMP, _CMD_GET_USERTEMP, CMD_CONNECT, CMD_AUTH, CMD_ACK_OK, CMD_ACK_UNAUTH, CMD_OPTIONS_RRQ, CMD_GET_VERSION, CMD_GET_TIME, CMD_EXIT, CMD_GET_FREE_SIZES, CMD_ACK_DATA, CMD_PREPARE_DATA, CMD_USERTEMP_RRQ, FCT_USER, CMD_ENABLEDEVICE, CMD_DISABLEDEVICE, CMD_SET_TIME, CMD_ATTLOG_RRQ, CMD_DB_RRQ, FCT_FINGERTMP, CMD_RESTART, CMD_UNLOCK, CMD_USER_WRQ, CMD_DELETE_USER, CMD_REFRESHDATA, CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, CMD_CLEAR_ATTLOG, EF_ATTLOG, USER_DEFAULT, USER_ADMIN } from '../others/constants.js';
 class ZKTecoClient {
     ip;
     port;
@@ -452,13 +453,7 @@ class ZKTecoClient {
                 if (user) {
                     userId = user.userId;
                 }
-                attendances.push({
-                    userId,
-                    timestamp,
-                    status,
-                    punch,
-                    uid
-                });
+                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, status, punch));
                 dataBuffer = dataBuffer.subarray(8);
             }
         }
@@ -478,13 +473,7 @@ class ZKTecoClient {
                 if (user) {
                     uid = user.uid;
                 }
-                attendances.push({
-                    userId,
-                    timestamp,
-                    status,
-                    punch,
-                    uid
-                });
+                attendances.push(new ZKTecoAttendance(userId, uid, timestamp, status, punch));
                 dataBuffer = dataBuffer.subarray(16);
             }
         }
@@ -516,19 +505,32 @@ class ZKTecoClient {
                 const timestamp = decodeTime(timestampBytes);
                 const punch = dataBuffer.readUInt8(31);
                 // Skip space (8 bytes)
-                attendances.push({
-                    userId: userId || uid.toString(),
-                    timestamp,
-                    status,
-                    punch,
-                    uid
-                });
+                attendances.push(new ZKTecoAttendance(userId || uid.toString(), uid, timestamp, status, punch));
                 dataBuffer = dataBuffer.subarray(recordSize); // Use recordSize to handle variations
             }
         }
         if (this.verbose)
             console.log('Parsed', attendances.length, 'attendance records');
         return attendances;
+    }
+    async clearAttendance() {
+        try {
+            const response = await sendCommand(CMD_CLEAR_ATTLOG, Buffer.alloc(0), 8, this);
+            const success = response !== null && response.readUInt16LE(0) === CMD_ACK_OK;
+            if (success) {
+                this.records = 0;
+            }
+            else if (this.verbose) {
+                console.warn('Clear attendance command returned unexpected response');
+            }
+            return success;
+        }
+        catch (error) {
+            if (this.verbose) {
+                console.error('Failed to clear attendance log:', error);
+            }
+            return false;
+        }
     }
     /**
      *

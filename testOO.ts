@@ -16,10 +16,10 @@ async function testLiveEvents() {
         console.log('Memory Info:', memory);
 
 
-        const users = await zk.getUser(3);
+        const users = await zk.getUser(2);
         if (users) {
-            const templates = await users.getTemplates();
-            console.log('Templates:', templates.map(template => template.toString()));
+            const attendance = await users.getAttendance();
+            console.log('Attendance:', attendance.map(attendance => attendance.toString()));
         }
         
     } catch (error) {
