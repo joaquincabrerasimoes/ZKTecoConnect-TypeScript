@@ -294,7 +294,10 @@ class ZKTecoClient {
                     const card = slice.readUInt32LE(16);
                     const userIdInt = slice.readUInt32LE(24);
                     const userId = userIdInt.toString();
-                    parsedUsers.push(new ZKTecoUser(uid, role, password, name || `NN-${userId}`, card, userId, this));
+                    const rawData = slice.subarray(0, 27).toString('hex');
+                    var user = new ZKTecoUser(uid, role, password, name || `NN-${userId}`, card, '0', userId, this);
+                    user.rawData = rawData;
+                    parsedUsers.push(user);
                     slice = slice.subarray(28);
                 }
             }
@@ -307,7 +310,9 @@ class ZKTecoClient {
                     const card = slice.readUInt32LE(35);
                     const groupId = removeNull(slice.subarray(40, 47).toString());
                     const userId = removeNull(slice.subarray(48, 72).toString());
-                    parsedUsers.push(new ZKTecoUser(uid, role, password, name || `NN-${userId}`, card, userId, this));
+                    var user = new ZKTecoUser(uid, role, password, name || `NN-${userId}`, card, groupId, userId, this);
+                    user.rawData = slice.subarray(0, 71).toString('hex');
+                    parsedUsers.push(user);
                     slice = slice.subarray(72);
                 }
             }

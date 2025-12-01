@@ -6,12 +6,15 @@ declare class ZKTecoUser {
     password: string;
     name: string;
     card: number;
+    groupId: string;
     userId: string;
     client: ZKTecoClient;
-    constructor(uid: number, role: number, password: string, name: string, card: number, userId: string, client: ZKTecoClient);
+    rawData: string;
+    constructor(uid: number, role: number, password: string, name: string, card: number, groupId: string, userId: string, client: ZKTecoClient);
     getAttendance(): Promise<ZKTecoAttendance[]>;
     getTemplates(): Promise<ZKTecoFinger[]>;
     toString(): string;
+    toStringWithRawData(): string;
 }
 export { ZKTecoUser };
 //# sourceMappingURL=zkTecoUser.d.ts.map

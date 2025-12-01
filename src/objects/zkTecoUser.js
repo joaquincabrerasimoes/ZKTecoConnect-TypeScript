@@ -5,14 +5,17 @@ class ZKTecoUser {
     password;
     name;
     card;
+    groupId;
     userId;
     client;
-    constructor(uid, role, password, name, card, userId, client) {
+    rawData = '';
+    constructor(uid, role, password, name, card, groupId, userId, client) {
         this.uid = uid;
         this.role = role;
         this.password = password;
         this.name = name;
         this.card = card;
+        this.groupId = groupId;
         this.userId = userId;
         this.client = client;
     }
@@ -47,7 +50,10 @@ class ZKTecoUser {
         return toReturn;
     }
     toString() {
-        return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, User ID: ${this.userId}`;
+        return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}`;
+    }
+    toStringWithRawData() {
+        return `UID: ${this.uid}, Role: ${this.role}, Password: ${this.password}, Name: ${this.name}, Card: ${this.card}, Group ID: ${this.groupId}, User ID: ${this.userId}, Raw Data: ${this.rawData}`;
     }
 }
 export { ZKTecoUser };
