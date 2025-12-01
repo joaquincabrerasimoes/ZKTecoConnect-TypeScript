@@ -1,7 +1,7 @@
 import * as net from 'net';
 import * as dgram from 'dgram';
 import { USHRT_MAX, MACHINE_PREPARE_DATA_1, MACHINE_PREPARE_DATA_2, CMD_PREPARE_BUFFER, CMD_DATA, CMD_PREPARE_DATA, CMD_ACK_OK, CMD_READ_BUFFER, CMD_FREE_DATA } from '../others/constants.js';
-import { createHeader, createTcpTop } from '../utils/utils.js';
+import { createHeader, createTcpTop, removeNull } from '../utils/utils.js';
 import { ZKTecoClient } from '../objects/zkTecoClient.js';
 export async function createSocket(ip, port, timeout, forceUdp, client) {
     return new Promise((resolve, reject) => {
@@ -373,5 +373,277 @@ export async function readChunk(start, size, client) {
 }
 export async function freeData(client) {
     await sendCommand(CMD_FREE_DATA, Buffer.alloc(0), 1024, client);
+}
+export async function sendAckOnly(client, receivedHeader = null) {
+    if (!client.socket)
+        return;
+    let ackSessionId = client.sessionId;
+    let ackReplyId = USHRT_MAX - 1;
+    if (receivedHeader && receivedHeader.length >= 8) {
+        ackSessionId = receivedHeader.readUInt16LE(4);
+        ackReplyId = receivedHeader.readUInt16LE(6);
+    }
+    const packet = createHeader(CMD_ACK_OK, Buffer.alloc(0), ackSessionId, ackReplyId);
+    await new Promise((resolve) => {
+        try {
+            if (client.socket instanceof net.Socket && !client.forceUdp) {
+                const tcpPacket = createTcpTop(packet);
+                client.socket.write(tcpPacket, () => resolve());
+            }
+            else if (client.socket instanceof dgram.Socket) {
+                client.socket.send(packet, client.port, client.ip, () => resolve());
+            }
+            else {
+                resolve();
+            }
+        }
+        catch {
+            resolve();
+        }
+    });
+}
+export async function receiveLivePacket(client, timeoutMs = 1000) {
+    if (!client.socket)
+        throw new Error('Socket not initialized');
+    const cleanupTcp = (socket, handlers, timer) => {
+        socket.removeListener('data', handlers.data);
+        socket.removeListener('error', handlers.error);
+        socket.removeListener('close', handlers.close);
+        clearTimeout(timer);
+    };
+    if (client.socket instanceof net.Socket && !client.forceUdp) {
+        const pendingPacket = consumePendingTcpPacket(client);
+        if (pendingPacket) {
+            return pendingPacket;
+        }
+        const socket = client.socket;
+        return new Promise((resolve) => {
+            let buffer = client.pendingLiveData && client.pendingLiveData.length > 0
+                ? client.pendingLiveData
+                : Buffer.alloc(0);
+            client.pendingLiveData = Buffer.alloc(0);
+            let expectedLength = 0;
+            const timer = setTimeout(() => {
+                cleanupTcp(socket, handlers, timer);
+                if (buffer.length > 0) {
+                    client.pendingLiveData = Buffer.from(buffer);
+                }
+                resolve(null);
+            }, timeoutMs);
+            const finish = (result) => {
+                if (result && expectedLength > 0 && buffer.length > expectedLength) {
+                    client.pendingLiveData = Buffer.from(buffer.subarray(expectedLength));
+                }
+                else if (!result && buffer.length > 0) {
+                    client.pendingLiveData = Buffer.from(buffer);
+                }
+                else {
+                    client.pendingLiveData = Buffer.alloc(0);
+                }
+                cleanupTcp(socket, handlers, timer);
+                resolve(result);
+            };
+            const handlers = {
+                data: (chunk) => {
+                    buffer = Buffer.concat([buffer, chunk]);
+                    if (expectedLength === 0 && buffer.length >= 8) {
+                        const header1 = buffer.readUInt16LE(0);
+                        const header2 = buffer.readUInt16LE(2);
+                        if (header1 !== MACHINE_PREPARE_DATA_1 || header2 !== MACHINE_PREPARE_DATA_2) {
+                            finish(null);
+                            return;
+                        }
+                        expectedLength = buffer.readUInt32LE(4) + 8;
+                    }
+                    if (expectedLength > 0 && buffer.length >= expectedLength) {
+                        const packet = extractLivePacket(buffer.subarray(0, expectedLength), 8);
+                        finish(packet);
+                    }
+                },
+                error: () => finish(null),
+                close: () => finish(null)
+            };
+            socket.on('data', handlers.data);
+            socket.on('error', handlers.error);
+            socket.on('close', handlers.close);
+        });
+    }
+    if (client.socket instanceof dgram.Socket) {
+        const socket = client.socket;
+        return new Promise((resolve) => {
+            let timer = setTimeout(() => {
+                cleanupUdp();
+                resolve(null);
+            }, timeoutMs);
+            const cleanupUdp = () => {
+                socket.off('message', onMessage);
+                socket.off('error', onError);
+                clearTimeout(timer);
+            };
+            const onMessage = (msg) => {
+                cleanupUdp();
+                resolve(extractLivePacket(msg, 0));
+            };
+            const onError = () => {
+                cleanupUdp();
+                resolve(null);
+            };
+            socket.on('message', onMessage);
+            socket.on('error', onError);
+        });
+    }
+    return null;
+}
+export async function flushExistingEvents(client, options = {}) {
+    const { timeoutMs = 200, maxPackets = 10, verbose = false } = options;
+    let flushed = 0;
+    while (flushed < maxPackets) {
+        const packet = await receiveLivePacket(client, timeoutMs);
+        if (!packet) {
+            break;
+        }
+        flushed++;
+        await sendAckOnly(client, packet.header);
+        if (verbose) {
+            console.log(`Flushed live packet (${packet.payload.length} bytes)`);
+        }
+    }
+    return flushed;
+}
+export function processLiveEventBuffer(buffer, userLookup, verbose = false) {
+    const events = [];
+    let workingBuffer = buffer;
+    while (workingBuffer.length >= 10) {
+        const eventSize = determineEventSize(workingBuffer.length);
+        if (eventSize === 0 || workingBuffer.length < eventSize) {
+            break;
+        }
+        const eventChunk = workingBuffer.subarray(0, eventSize);
+        const attendance = parseLiveEventData(eventChunk, userLookup, verbose);
+        if (attendance) {
+            events.push(attendance);
+        }
+        workingBuffer = workingBuffer.subarray(eventSize);
+    }
+    return { events, remainder: workingBuffer };
+}
+function extractLivePacket(packet, headerOffset) {
+    if (packet.length < headerOffset + 8) {
+        return null;
+    }
+    const header = packet.subarray(headerOffset, headerOffset + 8);
+    const payload = packet.subarray(headerOffset + 8);
+    const command = header.length >= 2 ? header.readUInt16LE(0) : 0;
+    return { header, payload, command };
+}
+function consumePendingTcpPacket(client) {
+    const pending = client.pendingLiveData;
+    if (!pending || pending.length < 8) {
+        return null;
+    }
+    const header1 = pending.readUInt16LE(0);
+    const header2 = pending.readUInt16LE(2);
+    if (header1 !== MACHINE_PREPARE_DATA_1 || header2 !== MACHINE_PREPARE_DATA_2) {
+        client.pendingLiveData = Buffer.alloc(0);
+        return null;
+    }
+    const expectedLength = pending.readUInt32LE(4) + 8;
+    if (pending.length < expectedLength) {
+        return null;
+    }
+    const packet = extractLivePacket(pending.subarray(0, expectedLength), 8);
+    client.pendingLiveData = pending.length > expectedLength
+        ? Buffer.from(pending.subarray(expectedLength))
+        : Buffer.alloc(0);
+    return packet;
+}
+function determineEventSize(bufferLength) {
+    if (bufferLength === 10 || bufferLength === 12 || bufferLength === 14 ||
+        bufferLength === 32 || bufferLength === 36 || bufferLength === 37) {
+        return bufferLength;
+    }
+    if (bufferLength >= 52)
+        return 52;
+    if (bufferLength >= 37)
+        return 37;
+    if (bufferLength >= 36)
+        return 36;
+    if (bufferLength >= 32)
+        return 32;
+    if (bufferLength >= 14)
+        return 14;
+    if (bufferLength >= 12)
+        return 12;
+    if (bufferLength >= 10)
+        return 10;
+    return 0;
+}
+function parseLiveEventData(data, userLookup, verbose) {
+    let userId = '';
+    let status = 0;
+    let punch = 0;
+    let timeBytes = null;
+    if (data.length === 10 || data.length === 14) {
+        const userIdInt = data.readUInt16LE(0);
+        userId = userIdInt.toString();
+        status = data.readUInt8(2);
+        punch = data.readUInt8(3);
+        timeBytes = data.subarray(4, 10);
+    }
+    else if (data.length === 12) {
+        const userIdInt = data.readUInt32LE(0);
+        userId = userIdInt.toString();
+        status = data.readUInt8(4);
+        punch = data.readUInt8(5);
+        timeBytes = data.subarray(6, 12);
+    }
+    else if (data.length === 32 || data.length === 36 || data.length === 37 || data.length >= 52) {
+        userId = removeNull(data.subarray(0, 24).toString());
+        status = data.readUInt8(24);
+        punch = data.readUInt8(25);
+        timeBytes = data.subarray(26, 32);
+    }
+    else {
+        if (verbose) {
+            console.warn(`Unrecognized live event size: ${data.length}`);
+        }
+        return null;
+    }
+    if (!userId || !timeBytes || timeBytes.length < 6) {
+        return null;
+    }
+    const timestamp = decodeLiveTimestamp(timeBytes);
+    let uid = userLookup.get(userId) ?? 0;
+    if (uid === 0) {
+        const parsedUid = parseInt(userId, 10);
+        if (!Number.isNaN(parsedUid)) {
+            uid = parsedUid;
+        }
+    }
+    return {
+        userId,
+        uid,
+        status,
+        punch,
+        timestamp
+    };
+}
+function decodeLiveTimestamp(timeBytes) {
+    const year = timeBytes.readUInt8(0);
+    const month = timeBytes.readUInt8(1);
+    const day = timeBytes.readUInt8(2);
+    const hour = timeBytes.readUInt8(3);
+    const minute = timeBytes.readUInt8(4);
+    const second = timeBytes.readUInt8(5);
+    const fullYear = 2000 + year;
+    const isValidDate = month >= 1 && month <= 12 &&
+        day >= 1 && day <= 31 &&
+        hour < 24 &&
+        minute < 60 &&
+        second < 60;
+    if (!isValidDate) {
+        return new Date(2000, 0, 1);
+    }
+    return new Date(fullYear, month - 1, day, hour, minute, second);
 }
 //# sourceMappingURL=generalFunctions.js.map

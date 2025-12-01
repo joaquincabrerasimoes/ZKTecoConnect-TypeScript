@@ -1,7 +1,18 @@
 import * as net from 'net';
 import * as dgram from 'dgram';
 import { Buffer } from 'buffer';
-import { createSocket, closeSocket, sendCommand, readSizes, readWithBuffer, receiveChunk } from '../utils/generalFunctions.js';
+import {
+    createSocket,
+    closeSocket,
+    sendCommand,
+    readSizes,
+    readWithBuffer,
+    receiveChunk,
+    sendAckOnly,
+    receiveLivePacket,
+    flushExistingEvents,
+    processLiveEventBuffer
+} from '../utils/generalFunctions.js';
 import type { ZKTecoAttendance, ZKTecoDeviceInfo, ZKTecoFinger } from '../others/interfaces.js';
 import { makeCommKey, removeNull, decodeTime, encodeTime } from '../utils/utils.js';
 import { ZKTecoUser } from './zkTecoUser.js';
@@ -12,6 +23,7 @@ import {
     CMD_GET_TIME, CMD_EXIT, CMD_GET_FREE_SIZES, CMD_ACK_DATA, CMD_PREPARE_DATA, CMD_USERTEMP_RRQ,
     FCT_USER, CMD_ENABLEDEVICE, CMD_DISABLEDEVICE, CMD_SET_TIME, CMD_ATTLOG_RRQ, CMD_DB_RRQ,
     FCT_FINGERTMP, CMD_RESTART, CMD_UNLOCK, CMD_USER_WRQ, CMD_DELETE_USER, CMD_REFRESHDATA,
+    CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, EF_ATTLOG,
     USER_DEFAULT, USER_ADMIN
 } from '../others/constants.js';
 
@@ -30,10 +42,19 @@ class ZKTecoClient {
     tcpLength: number = 0;
     lastResponse: number = 0;
     lastData: Buffer = Buffer.alloc(0);
+    pendingLiveData: Buffer = Buffer.alloc(0);
 
     nextUid_: number = 1;
     nextUserId_: string = '1';
     userPacketSize_: number = 72;
+
+    liveCaptureActive: boolean = false;
+    liveCaptureTimeoutMs: number = 1000;
+    liveCaptureUsers: ZKTecoUser[] = [];
+    liveCaptureUserMap: Map<string, number> = new Map();
+    liveEventBuffer: Buffer = Buffer.alloc(0);
+    liveEventQueue: ZKTecoAttendance[] = [];
+    wasEnabledBeforeLiveCapture: boolean = true;
 
     users: number = 0;
     fingers: number = 0;
@@ -912,10 +933,143 @@ class ZKTecoClient {
         return false;
     }
 
-    // Live capture would require event emitter or callback mechanism
-    // For now, just a placeholder or basic implementation if requested
-    public async startLiveCapture(): Promise<void> {
-        // TODO: Implement live capture loop
+    public async startLiveCapture(timeoutSeconds: number = 2): Promise<boolean> {
+        if (!this.isConnected) {
+            const connected = await this.connect();
+            if (!connected) {
+                return false;
+            }
+        }
+
+        if (this.liveCaptureActive) {
+            return true;
+        }
+
+        this.liveCaptureTimeoutMs = Math.max(200, Math.floor(timeoutSeconds * 1000));
+        this.liveEventBuffer = Buffer.alloc(0);
+        this.liveEventQueue = [];
+        this.pendingLiveData = Buffer.alloc(0);
+        this.wasEnabledBeforeLiveCapture = true;
+
+        try {
+            this.liveCaptureUsers = await this.getUsers();
+            this.liveCaptureUserMap = new Map(this.liveCaptureUsers.map(user => [user.userId, user.uid]));
+        } catch (error) {
+            if (this.verbose) console.error('Live capture: unable to load users', error);
+            return false;
+        }
+
+        try {
+            await sendCommand(CMD_CANCELCAPTURE, Buffer.alloc(0), 8, this);
+        } catch (error) {
+            if (this.verbose) console.warn('Live capture: cancel capture failed', error);
+        }
+
+        try {
+            const verifyResponse = await sendCommand(CMD_STARTVERIFY, Buffer.alloc(0), 8, this);
+            if (!verifyResponse || verifyResponse.readUInt16LE(0) !== CMD_ACK_OK) {
+                throw new Error('Device rejected start verify command');
+            }
+        } catch (error) {
+            if (this.verbose) console.error('Live capture: failed to start verify mode', error);
+            return false;
+        }
+
+        await this.enableDevice();
+
+        try {
+            const eventMask = Buffer.alloc(4);
+            eventMask.writeUInt32LE(EF_ATTLOG, 0);
+            const regResponse = await sendCommand(CMD_REG_EVENT, eventMask, 1024, this);
+            if (!regResponse || regResponse.readUInt16LE(0) !== CMD_ACK_OK) {
+                throw new Error('Device rejected event registration');
+            }
+        } catch (error) {
+            if (this.verbose) console.error('Live capture: failed to register events', error);
+            return false;
+        }
+
+        try {
+            await flushExistingEvents(this, {
+                timeoutMs: Math.min(this.liveCaptureTimeoutMs, 500),
+                verbose: this.verbose
+            });
+        } catch (error) {
+            if (this.verbose) console.warn('Live capture: flush existing events failed', error);
+        }
+
+        this.liveCaptureActive = true;
+        return true;
+    }
+
+    public async getNextLiveEvent(timeoutMs: number = this.liveCaptureTimeoutMs): Promise<ZKTecoAttendance | null> {
+        if (!this.liveCaptureActive) {
+            return null;
+        }
+
+        if (this.liveEventQueue.length > 0) {
+            return this.liveEventQueue.shift() ?? null;
+        }
+
+        try {
+            const packet = await receiveLivePacket(this, timeoutMs);
+            if (!packet) {
+                return null;
+            }
+
+            await sendAckOnly(this, packet.header);
+
+            if (packet.command !== CMD_REG_EVENT) {
+                return null;
+            }
+
+            const combinedBuffer = this.liveEventBuffer.length > 0
+                ? Buffer.concat([this.liveEventBuffer, packet.payload])
+                : packet.payload;
+
+            const { events, remainder } = processLiveEventBuffer(
+                combinedBuffer,
+                this.liveCaptureUserMap,
+                this.verbose
+            );
+
+            this.liveEventBuffer = remainder;
+
+            if (events.length > 0) {
+                this.liveEventQueue.push(...events);
+            }
+
+            return this.liveEventQueue.shift() ?? null;
+        } catch (error) {
+            if (this.verbose) console.error('Live capture: failed to read next event', error);
+            return null;
+        }
+    }
+
+    public async stopLiveCapture(): Promise<boolean> {
+        if (!this.liveCaptureActive) {
+            return true;
+        }
+
+        try {
+            const payload = Buffer.alloc(4, 0);
+            await sendCommand(CMD_REG_EVENT, payload, 1024, this);
+        } catch (error) {
+            if (this.verbose) console.warn('Live capture: failed to unregister events', error);
+        }
+
+        if (!this.wasEnabledBeforeLiveCapture) {
+            await this.disableDevice();
+        }
+
+        this.liveCaptureActive = false;
+        this.liveCaptureUsers = [];
+        this.liveCaptureUserMap.clear();
+        this.liveEventBuffer = Buffer.alloc(0);
+        this.liveEventQueue = [];
+        this.pendingLiveData = Buffer.alloc(0);
+
+        return true;
     }
 
     public async restart(): Promise<boolean> {

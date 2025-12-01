@@ -29,4 +29,9 @@ export interface ZKTecoFinger {
     valid: number;
     template: string;
 }
+export interface FlushOptions {
+    timeoutMs?: number;
+    maxPackets?: number;
+    verbose?: boolean;
+}
 //# sourceMappingURL=interfaces.d.ts.map

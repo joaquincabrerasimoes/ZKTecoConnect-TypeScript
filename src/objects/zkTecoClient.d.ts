@@ -17,9 +17,17 @@ declare class ZKTecoClient {
     tcpLength: number;
     lastResponse: number;
     lastData: Buffer;
+    pendingLiveData: Buffer;
     nextUid_: number;
     nextUserId_: string;
     userPacketSize_: number;
+    liveCaptureActive: boolean;
+    liveCaptureTimeoutMs: number;
+    liveCaptureUsers: ZKTecoUser[];
+    liveCaptureUserMap: Map<string, number>;
+    liveEventBuffer: Buffer;
+    liveEventQueue: ZKTecoAttendance[];
+    wasEnabledBeforeLiveCapture: boolean;
     users: number;
     fingers: number;
     records: number;
@@ -137,7 +145,9 @@ declare class ZKTecoClient {
      */
     refreshData(): Promise<boolean>;
     deleteUserTemplate(uid?: number, tempId?: number, userId?: string): Promise<boolean>;
-    startLiveCapture(): Promise<void>;
+    startLiveCapture(timeoutSeconds?: number): Promise<boolean>;
+    getNextLiveEvent(timeoutMs?: number): Promise<ZKTecoAttendance | null>;
+    stopLiveCapture(): Promise<boolean>;
     restart(): Promise<boolean>;
     unlock(time?: number): Promise<boolean>;
     setUser(uid: number, name: string, privilege: number, password: string, groupId: string, userId: string, card: number): Promise<boolean>;
