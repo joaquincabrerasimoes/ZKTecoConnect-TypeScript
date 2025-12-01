@@ -1,11 +1,4 @@
-var ZKAttendanceStatus;
-(function (ZKAttendanceStatus) {
-    ZKAttendanceStatus[ZKAttendanceStatus["empty"] = 0] = "empty";
-    ZKAttendanceStatus[ZKAttendanceStatus["fingerprint"] = 1] = "fingerprint";
-    ZKAttendanceStatus[ZKAttendanceStatus["face"] = 2] = "face";
-    ZKAttendanceStatus[ZKAttendanceStatus["password"] = 3] = "password";
-    ZKAttendanceStatus[ZKAttendanceStatus["card"] = 4] = "card";
-})(ZKAttendanceStatus || (ZKAttendanceStatus = {}));
+import { ZKAttendanceIDMethod } from '../others/enums.js';
 class ZKTecoAttendance {
     userId;
     uid;
@@ -22,46 +15,46 @@ class ZKTecoAttendance {
     get identificationMethod() {
         switch (this.status) {
             case 0:
-                return ZKAttendanceStatus.empty;
+                return ZKAttendanceIDMethod.empty;
             case 1:
-                return ZKAttendanceStatus.fingerprint;
+                return ZKAttendanceIDMethod.fingerprint;
             case 2:
-                return ZKAttendanceStatus.face;
+                return ZKAttendanceIDMethod.face;
             case 3:
-                return ZKAttendanceStatus.password;
+                return ZKAttendanceIDMethod.password;
             case 4:
-                return ZKAttendanceStatus.card;
+                return ZKAttendanceIDMethod.card;
             default:
-                return ZKAttendanceStatus.empty;
+                return ZKAttendanceIDMethod.empty;
         }
     }
     /// Get a human-readable string for the identification method
     get identificationMethodString() {
         switch (this.identificationMethod) {
-            case ZKAttendanceStatus.empty:
+            case ZKAttendanceIDMethod.empty:
                 return 'Unknown';
-            case ZKAttendanceStatus.fingerprint:
+            case ZKAttendanceIDMethod.fingerprint:
                 return 'Fingerprint';
-            case ZKAttendanceStatus.face:
+            case ZKAttendanceIDMethod.face:
                 return 'Face Recognition';
-            case ZKAttendanceStatus.password:
+            case ZKAttendanceIDMethod.password:
                 return 'Password';
-            case ZKAttendanceStatus.card:
+            case ZKAttendanceIDMethod.card:
                 return 'Card/RFID';
         }
     }
     /// Get an icon for the identification method
     get identificationMethodIcon() {
         switch (this.identificationMethod) {
-            case ZKAttendanceStatus.empty:
+            case ZKAttendanceIDMethod.empty:
                 return '❓';
-            case ZKAttendanceStatus.fingerprint:
+            case ZKAttendanceIDMethod.fingerprint:
                 return '👆';
-            case ZKAttendanceStatus.face:
+            case ZKAttendanceIDMethod.face:
                 return '😊';
-            case ZKAttendanceStatus.password:
+            case ZKAttendanceIDMethod.password:
                 return '🔢';
-            case ZKAttendanceStatus.card:
+            case ZKAttendanceIDMethod.card:
                 return '💳';
         }
     }

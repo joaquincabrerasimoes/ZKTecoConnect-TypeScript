@@ -1,10 +1,4 @@
-declare enum ZKAttendanceStatus {
-    empty = 0,// 0
-    fingerprint = 1,// 1
-    face = 2,// 2
-    password = 3,// 3
-    card = 4
-}
+import { ZKAttendanceIDMethod } from '../others/enums.js';
 declare class ZKTecoAttendance {
     userId: string;
     uid: number;
@@ -12,7 +6,7 @@ declare class ZKTecoAttendance {
     status: number;
     punch: number;
     constructor(userId: string, uid: number, timestamp: Date, status: number, punch: number);
-    get identificationMethod(): ZKAttendanceStatus;
+    get identificationMethod(): ZKAttendanceIDMethod;
     get identificationMethodString(): string;
     get identificationMethodIcon(): string;
     toString(): string;

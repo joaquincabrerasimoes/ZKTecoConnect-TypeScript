@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import type { ZKTecoDeviceInfo, ZKTecoFinger } from '../others/interfaces.js';
 import { ZKTecoUser } from './zkTecoUser.js';
 import { ZKTecoAttendance } from './zkTecoAttendance.js';
+import { ZKSound } from '../others/enums.js';
 declare class ZKTecoClient {
     ip: string;
     port: number;
@@ -124,7 +125,7 @@ declare class ZKTecoClient {
      * 55 -\n
      * @returns
      */
-    testVoice(index?: number): Promise<boolean>;
+    testVoice(index?: ZKSound): Promise<boolean>;
     /**
      * Get all fingerprint templates from the device
      * @returns Array of ZKTecoFinger objects

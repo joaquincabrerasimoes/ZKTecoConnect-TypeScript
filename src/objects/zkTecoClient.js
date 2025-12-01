@@ -6,6 +6,7 @@ import { makeCommKey, removeNull, decodeTime, encodeTime } from '../utils/utils.
 import { ZKTecoUser } from './zkTecoUser.js';
 import { ZKTecoAttendance } from './zkTecoAttendance.js';
 import { CMD_DELETE_USERTEMP, CMD_TESTVOICE, USHRT_MAX, _CMD_DEL_USER_TEMP, _CMD_GET_USERTEMP, CMD_CONNECT, CMD_AUTH, CMD_ACK_OK, CMD_ACK_UNAUTH, CMD_OPTIONS_RRQ, CMD_GET_VERSION, CMD_GET_TIME, CMD_EXIT, CMD_GET_FREE_SIZES, CMD_ACK_DATA, CMD_PREPARE_DATA, CMD_USERTEMP_RRQ, FCT_USER, CMD_ENABLEDEVICE, CMD_DISABLEDEVICE, CMD_SET_TIME, CMD_ATTLOG_RRQ, CMD_DB_RRQ, FCT_FINGERTMP, CMD_RESTART, CMD_UNLOCK, CMD_USER_WRQ, CMD_DELETE_USER, CMD_REFRESHDATA, CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, CMD_CLEAR_ATTLOG, EF_ATTLOG, USER_DEFAULT, USER_ADMIN } from '../others/constants.js';
+import { ZKSound } from '../others/enums.js';
 class ZKTecoClient {
     ip;
     port;
@@ -593,7 +594,7 @@ class ZKTecoClient {
      * 55 -\n
      * @returns
      */
-    async testVoice(index = 0) {
+    async testVoice(index = ZKSound.thankYou) {
         const commandString = Buffer.alloc(4);
         commandString.writeUInt32LE(index, 0);
         const response = await sendCommand(CMD_TESTVOICE, commandString, 1024, this);
