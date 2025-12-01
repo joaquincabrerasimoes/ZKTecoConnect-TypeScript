@@ -15,34 +15,13 @@ async function testLiveEvents() {
         const memory = await zk.getMemoryInfo();
         console.log('Memory Info:', memory);
 
-        console.log('Starting live capture...');
-        const started = await zk.startLiveCapture(2);
-        if (!started) {
-            console.error('Unable to start live capture');
-            return;
+
+        const users = await zk.getUser(3);
+        if (users) {
+            const templates = await users.getTemplates();
+            console.log('Templates:', templates.map(template => template.toString()));
         }
-
-        const eventsToCollect = 5;
-        const timeoutMs = 15000;
-        const startTime = Date.now();
-        let collected = 0;
-
-        while (collected < eventsToCollect && Date.now() - startTime < timeoutMs) {
-            const event = await zk.getNextLiveEvent();
-            if (event) {
-                collected++;
-                console.log(`Live Event ${collected}:`, {
-                    userId: event.userId,
-                    uid: event.uid,
-                    timestamp: event.timestamp,
-                    status: event.status,
-                    punch: event.punch
-                });
-            }
-        }
-
-        await zk.stopLiveCapture();
-        console.log(`Live capture stopped after collecting ${collected} events`);
+        
     } catch (error) {
         console.error('Live capture test failed:', error);
     } finally {

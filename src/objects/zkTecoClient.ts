@@ -23,7 +23,7 @@ import {
     CMD_GET_TIME, CMD_EXIT, CMD_GET_FREE_SIZES, CMD_ACK_DATA, CMD_PREPARE_DATA, CMD_USERTEMP_RRQ,
     FCT_USER, CMD_ENABLEDEVICE, CMD_DISABLEDEVICE, CMD_SET_TIME, CMD_ATTLOG_RRQ, CMD_DB_RRQ,
     FCT_FINGERTMP, CMD_RESTART, CMD_UNLOCK, CMD_USER_WRQ, CMD_DELETE_USER, CMD_REFRESHDATA,
-    CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, EF_ATTLOG,
+    CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, CMD_CLEAR_ATTLOG, EF_ATTLOG,
     USER_DEFAULT, USER_ADMIN
 } from '../others/constants.js';
 
@@ -644,6 +644,26 @@ class ZKTecoClient {
 
         if (this.verbose) console.log('Parsed', attendances.length, 'attendance records');
         return attendances;
+    }
+
+    public async clearAttendance(): Promise<boolean> {
+        try {
+            const response = await sendCommand(CMD_CLEAR_ATTLOG, Buffer.alloc(0), 8, this);
+            const success = response !== null && response.readUInt16LE(0) === CMD_ACK_OK;
+
+            if (success) {
+                this.records = 0;
+            } else if (this.verbose) {
+                console.warn('Clear attendance command returned unexpected response');
+            }
+
+            return success;
+        } catch (error) {
+            if (this.verbose) {
+                console.error('Failed to clear attendance log:', error);
+            }
+            return false;
+        }
     }
 
     /**
