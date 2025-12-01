@@ -27,6 +27,7 @@ import {
     CMD_STARTVERIFY, CMD_CANCELCAPTURE, CMD_REG_EVENT, CMD_CLEAR_ATTLOG, EF_ATTLOG,
     USER_DEFAULT, USER_ADMIN
 } from '../others/constants.js';
+import { ZKSound } from '../others/enums.js';
 
 class ZKTecoClient {
     ip: string;
@@ -710,7 +711,7 @@ class ZKTecoClient {
      * 55 -\n
      * @returns 
      */
-    public async testVoice(index: number = 0): Promise<boolean> {
+    public async testVoice(index: ZKSound = ZKSound.thankYou): Promise<boolean> {
         const commandString = Buffer.alloc(4);
         commandString.writeUInt32LE(index, 0);
         const response = await sendCommand(CMD_TESTVOICE, commandString, 1024, this);
