@@ -119,7 +119,7 @@ export async function sendCommand(command: number, commandString: Buffer, respon
             timeoutId = setTimeout(() => {
                 cleanup();
                 reject(new Error('Command timeout'));
-            }, 2000); // 2 seconds timeout for command response
+            }, client.timeout); // 2 seconds timeout for command response
 
             client.socket?.on('data', onData);
             client.socket?.on('error', onError);

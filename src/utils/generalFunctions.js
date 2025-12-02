@@ -136,7 +136,7 @@ async function sendCommand(command, commandString, responseSize, client) {
             timeoutId = setTimeout(() => {
                 cleanup();
                 reject(new Error('Command timeout'));
-            }, 2000); // 2 seconds timeout for command response
+            }, client.timeout); // 2 seconds timeout for command response
             client.socket?.on('data', onData);
             client.socket?.on('error', onError);
             client.socket?.on('close', onClose);
