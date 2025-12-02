@@ -1,7 +1,8 @@
-import { ZKTecoClient } from './src/index.js';
-import { ZKAttendanceIDMethod } from './src/others/enums.js';
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const index_js_1 = require("./dist/index.js");
 async function testLiveEvents() {
-    const zk = new ZKTecoClient('192.168.0.233', 4371, 5000, 69420, false, true);
+    const zk = new index_js_1.ZKTecoClient('192.168.0.233', 4371, 5000, 69420, false, true);
     try {
         console.log('Connecting...');
         const connected = await zk.connect();
@@ -28,4 +29,3 @@ async function testLiveEvents() {
     }
 }
 testLiveEvents();
-//# sourceMappingURL=testOO.js.map

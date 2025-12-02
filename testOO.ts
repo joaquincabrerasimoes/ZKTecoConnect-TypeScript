@@ -1,5 +1,4 @@
-import { ZKTecoClient } from './src/index.js';
-import { ZKAttendanceIDMethod } from './src/others/enums.js';
+import { ZKTecoClient, ZKAttendanceIDMethod } from './dist/index.js';
 
 async function testLiveEvents() {
     const zk = new ZKTecoClient('192.168.0.233', 4371, 5000, 69420, false, true);
