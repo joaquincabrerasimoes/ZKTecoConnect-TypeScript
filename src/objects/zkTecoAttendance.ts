@@ -1,4 +1,4 @@
-import { ZKAttendanceIDMethod } from '../others/enums.js';
+import { ZKAttendanceIDMethod } from '../others/enums';
 
 class ZKTecoAttendance {
     uid: number;

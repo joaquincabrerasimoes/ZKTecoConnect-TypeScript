@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-import { USHRT_MAX, MACHINE_PREPARE_DATA_1, MACHINE_PREPARE_DATA_2 } from '../others/constants.js';
+import { USHRT_MAX, MACHINE_PREPARE_DATA_1, MACHINE_PREPARE_DATA_2 } from '../others/constants';
 
 export const createChecksum = (packet: Buffer): number => {
     let checksum = 0;
