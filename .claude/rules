@@ -1,0 +1,38 @@
+# ZKTecoConnect-TypeScript - Development Rules
+
+## TypeScript Standards
+- Use strict mode (enabled in tsconfig.json)
+- Define proper TypeScript interfaces for all data structures
+- Use async/await for all asynchronous operations
+- Handle errors with try/catch blocks
+
+## Binary Protocol
+- Follow existing packet structure conventions
+- Use Buffer for all binary data handling
+- Maintain checksum validation for all packets
+- Document command codes in constants.ts
+
+## Socket Management
+- Properly clean up event listeners after operations
+- Use configurable timeouts per command
+- Track connection state
+- Graceful error handling with fallbacks
+
+## Data Format Handling
+- Auto-detect packet format variations (device model differences)
+- Handle variable-length data gracefully
+- Provide fallbacks for unknown formats
+
+## Code Organization
+- Keep ZKTecoClient as main orchestrator
+- Domain objects (User, Attendance) should be lightweight
+- Utility functions in utils/ directory
+- Constants and enums in others/ directory
+
+## Testing
+- Test against multiple device models if possible
+- Verify checksum calculations
+- Test timeout handling
+
+## [USER: Add your custom rules below]
+
